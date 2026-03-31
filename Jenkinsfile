@@ -12,14 +12,13 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
-                        // Ambil list modul (folder) di Test Suites
+                        // Ambil list modul di Test Suites
                         def modulDirsRaw = bat(
-                            script: "dir /b /ad \"${env.WORKSPACE}\\Test Suites\"",
+                            script: "for /d %i in (\"${WORKSPACE}\\Test Suites\\*\") do @echo %~nxi",
                             returnStdout: true
                         ).trim()
-                        // Split baris ke array, hapus baris kosong
-                        def modulDirs = modulDirsRaw.split("\\r?\\n").findAll { it?.trim() }
 
+                        def modulDirs = modulDirsRaw.split("\\r?\\n").findAll { it?.trim() }
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
@@ -27,22 +26,19 @@ pipeline {
 
                             // Ambil semua TS (.ts) di modul
                             def tsRaw = bat(
-                                script: "dir /b \"${env.WORKSPACE}\\Test Suites\\${modul}\\*.ts\"",
+                                script: "for %i in (\"${WORKSPACE}\\Test Suites\\${modul}\\*.ts\") do @echo %~nxi",
                                 returnStdout: true
                             ).trim()
+
                             def tsList = tsRaw ? tsRaw.split("\\r?\\n").findAll { it?.trim() } : []
 
                             tsList.each { tsFile ->
-                                // Path relative untuk Katalon
-                                def tsPath = "Test Suites/${modul}/${tsFile}".replace("\\","/")
-
+                                def tsPath = "Test Suites/${modul}/${tsFile}".replace("\\", "/")
                                 echo "Running Test Suite: ${tsPath}"
 
-                                // Folder report per modul
-                                def modulReportDir = "${env.REPORT_DIR}\\${modul}"
+                                def modulReportDir = "${REPORT_DIR}\\${modul}"
                                 bat "if not exist \"${modulReportDir}\" mkdir \"${modulReportDir}\""
 
-                                // Jalankan Katalon CLI
                                 bat """
                                 ${KATALON_PATH} -noSplash -runMode=console ^
                                 -projectPath="${PROJECT_PATH}" ^

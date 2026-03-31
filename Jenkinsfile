@@ -40,7 +40,6 @@ pipeline {
 
                             tsFiles.each { tsFile ->
 
-                                // 🔥 FIX DI SINI (hapus .ts)
                                 def tsPath = "Test Suites/${modul}/${tsFile.replace('.ts','')}"
 
                                 def modulReportDir = new File(REPORT_DIR)
@@ -62,6 +61,20 @@ pipeline {
                         }
                     }
                 }
+            }
+        }
+
+        // 🔥 TAMBAHAN DI SINI (bersihin file liar)
+        stage('Clean Root Report Files') {
+            steps {
+                bat """
+                cd "${REPORT_DIR}"
+                for %%f in (*) do (
+                    if not exist "%%f\\" (
+                        del /f /q "%%f"
+                    )
+                )
+                """
             }
         }
 

@@ -11,7 +11,6 @@ pipeline {
 
         stage('Clean Reports') {
             steps {
-                echo "Cleaning old reports..."
                 bat "if exist \"${REPORT_DIR}\" rmdir /s /q \"${REPORT_DIR}\""
             }
         }
@@ -22,11 +21,7 @@ pipeline {
                     script {
 
                         def testSuitesDir = new File("${WORKSPACE}\\Test Suites")
-                        if (!testSuitesDir.exists()) {
-                            error "Folder Test Suites tidak ditemukan!"
-                        }
 
-                        // ambil folder modul
                         def modulDirs = testSuitesDir.listFiles()
                             .findAll { it.isDirectory() }
                             *.name
@@ -34,32 +29,23 @@ pipeline {
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
-                            echo "Running module: ${modul}"
 
                             def modulDir = new File(testSuitesDir, modul)
 
-                            // ambil semua file .ts di dalam modul
                             def tsFiles = modulDir.listFiles()
                                 .findAll { it.name.endsWith('.ts') }
                                 *.name
 
-                            echo "Found TS: ${tsFiles}"
+                            echo "Running module: ${modul} -> ${tsFiles}"
 
                             tsFiles.each { tsFile ->
 
-                                // remove .ts (WAJIB buat Katalon CLI)
-                                def tsPath = "Test Suites/${modul}/${tsFile.replaceFirst(/\\.ts$/, '')}"
-                                    .replace("\\", "/")
+                                // 🔥 FIX DI SINI (hapus .ts)
+                                def tsPath = "Test Suites/${modul}/${tsFile.replace('.ts','')}"
 
-                                echo "Running Test Suite: ${tsPath}"
-
-                                // buat folder report per modul
                                 def modulReportDir = new File(REPORT_DIR, modul)
-                                if (!modulReportDir.exists()) {
-                                    modulReportDir.mkdirs()
-                                }
+                                modulReportDir.mkdirs()
 
-                                // execute Katalon
                                 bat """
                                 "${KATALON_PATH}" -noSplash -runMode=console ^
                                 -projectPath="${PROJECT_PATH}" ^
@@ -81,7 +67,6 @@ pipeline {
 
         stage('Publish Reports') {
             steps {
-                echo "Publishing HTML Reports..."
                 publishHTML(target: [
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
@@ -96,7 +81,7 @@ pipeline {
 
     post {
         always {
-            echo "Pipeline finished. Reports saved in ${REPORT_DIR}"
+            echo "Reports saved in ${REPORT_DIR}"
         }
     }
 }

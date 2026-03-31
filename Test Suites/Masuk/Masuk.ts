@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuiteEntity>
+   <description></description>
+   <name>Masuk</name>
+   <tag></tag>
+   <isRerun>false</isRerun>
+   <mailRecipient></mailRecipient>
+   <numberOfRerun>3</numberOfRerun>
+   <pageLoadTimeout>10</pageLoadTimeout>
+   <pageLoadTimeoutDefault>true</pageLoadTimeoutDefault>
+   <rerunFailedTestCasesOnly>false</rerunFailedTestCasesOnly>
+   <rerunImmediately>true</rerunImmediately>
+   <testSuiteGuid>38b15b24-f898-4559-adb2-98fa663fad65</testSuiteGuid>
+   <testCaseLink>
+      <guid>1edadf72-84b0-4db9-acdb-606e7654d7f3</guid>
+      <isReuseDriver>false</isReuseDriver>
+      <isRun>true</isRun>
+      <testCaseId>Test Cases/Masuk/Masuk</testCaseId>
+      <testDataLink>
+         <combinationType>ONE</combinationType>
+         <id>8cf1176c-2cb7-4612-b0f6-7ee88d7210cf</id>
+         <iterationEntity>
+            <iterationType>ALL</iterationType>
+            <value></value>
+         </iterationEntity>
+         <testDataId>Data Files/Masuk/Masuk</testDataId>
+      </testDataLink>
+      <usingDataBindingAtTestSuiteLevel>true</usingDataBindingAtTestSuiteLevel>
+      <variableLink>
+         <testDataLinkId>8cf1176c-2cb7-4612-b0f6-7ee88d7210cf</testDataLinkId>
+         <type>DATA_COLUMN</type>
+         <value>username</value>
+         <variableId>6570c440-2e2d-42bb-89a2-c31a5448fdc5</variableId>
+      </variableLink>
+      <variableLink>
+         <testDataLinkId>8cf1176c-2cb7-4612-b0f6-7ee88d7210cf</testDataLinkId>
+         <type>DATA_COLUMN</type>
+         <value>password</value>
+         <variableId>f32da1bb-df9e-4f81-9242-896cccef453f</variableId>
+      </variableLink>
+   </testCaseLink>
+</TestSuiteEntity>

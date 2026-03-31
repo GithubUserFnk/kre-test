@@ -12,35 +12,44 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
-                        // List folder modul di Test Suites
+                        // --- List folder modul di Test Suites ---
                         def modulDirs = []
-                        bat(script: "dir /b /ad \"%WORKSPACE%\\Test Suites\"", returnStdout: true)
-                            .trim()
-                            .split("\r\n")
-                            .each { modul ->
-                                modulDirs << modul
+                        def rawModules = bat(
+                            script: "dir /b /ad \"%WORKSPACE%\\Test Suites\"",
+                            returnStdout: true
+                        ).trim().split("\r\n")
+
+                        rawModules.each { modul ->
+                            if(modul?.trim()) {
+                                modulDirs << modul.trim()
                             }
+                        }
 
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
                             echo "Running module: ${modul}"
 
-                            // List semua test suite di modul
+                            // --- List semua test suite di modul ---
                             def tsList = []
-                            bat(script: "dir /b /s \"%WORKSPACE%\\Test Suites\\${modul}\\*.ts\"", returnStdout: true)
-                                .trim()
-                                .split("\r\n")
-                                .each { filePath ->
-                                    def relativePath = filePath.replace("${WORKSPACE}\\", "").replace("\\", "/")
+                            def rawTS = bat(
+                                script: "dir /b /s \"%WORKSPACE%\\Test Suites\\${modul}\\*.ts\"",
+                                returnStdout: true
+                            ).trim().split("\r\n")
+
+                            rawTS.each { tsPath ->
+                                if(tsPath?.trim()) {
+                                    def relativePath = tsPath.replace("${WORKSPACE}\\", "").replace("\\", "/")
                                     tsList << relativePath
                                 }
+                            }
 
                             tsList.each { ts ->
                                 echo "Running Test Suite: ${ts}"
-                                def modulReportDir = "${REPORT_DIR}\\${modul}"
+                                def modulReportDir = "${env.REPORT_DIR}\\${modul}"
                                 bat "if not exist \"${modulReportDir}\" mkdir \"${modulReportDir}\""
 
+                                // --- Jalankan Katalon CLI ---
                                 bat """
                                 %KATALON_PATH% -noSplash -runMode=console ^
                                 -projectPath="${PROJECT_PATH}" ^
@@ -62,11 +71,12 @@ pipeline {
 
         stage('Publish Reports') {
             steps {
+                // --- Publish HTML report dari semua modul ---
                 publishHTML(target: [
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: 'Reports',
+                    reportDir: "${env.REPORT_DIR}",
                     reportFiles: '**/index.html',
                     reportName: 'Katalon Test Report'
                 ])
@@ -76,7 +86,7 @@ pipeline {
 
     post {
         always {
-            echo "Pipeline finished. Reports saved in ${REPORT_DIR}"
+            echo "Pipeline finished. Reports saved in ${env.REPORT_DIR}"
         }
     }
 }

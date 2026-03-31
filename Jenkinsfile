@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         KATALON_PATH = "C:\\Katalon\\KRE\\katalonc.exe"
-        PROJECT_PATH = "%WORKSPACE%\\kre-test.prj"
-        REPORT_DIR = "%WORKSPACE%\\Reports"
+        PROJECT_PATH = "${env.WORKSPACE}\\kre-test.prj"
+        REPORT_DIR = "${env.WORKSPACE}\\Reports"
     }
 
     stages {
@@ -12,49 +12,50 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
-                        def testSuitesDir = new File("${WORKSPACE}\\Test Suites")
-                        def modulDirs = []
-
-                        // List modul (folder)
-                        testSuitesDir.eachDir { dir ->
-                            modulDirs << dir.name
-                        }
+                        // List modul (folder) di Test Suites
+                        def modulDirs = bat(
+                            script: "dir /b /ad \"${env.WORKSPACE}\\Test Suites\"",
+                            returnStdout: true
+                        ).trim().split("\r\n")
 
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
                             echo "Running module: ${modul}"
 
-                            def modulDir = new File(testSuitesDir, modul)
-                            def tsList = []
-
                             // List semua .ts di modul
-                            modulDir.eachFileRecurse { file ->
-                                if(file.name.endsWith(".ts")) {
-                                    def relativePath = file.path.replace("${WORKSPACE}\\", "").replace("\\", "/")
-                                    tsList << relativePath
+                            def tsListRaw = bat(
+                                script: "dir /b \"${env.WORKSPACE}\\Test Suites\\${modul}\\*.ts\"",
+                                returnStdout: true
+                            ).trim()
+
+                            if (tsListRaw) {
+                                def tsList = tsListRaw.split("\r\n")
+                                tsList.each { tsFile ->
+                                    def tsName = tsFile.replace('.ts', '')
+                                    def tsPath = "Test Suites/${modul}/${tsName}"
+                                    echo "Running Test Suite: ${tsPath}"
+
+                                    // Buat folder report per modul
+                                    def modulReportDir = "${env.REPORT_DIR}\\${modul}"
+                                    bat "if not exist \"${modulReportDir}\" mkdir \"${modulReportDir}\""
+
+                                    // Jalankan Katalon CLI
+                                    bat """
+                                    %KATALON_PATH% -noSplash -runMode=console ^
+                                    -projectPath="${PROJECT_PATH}" ^
+                                    -retry=0 ^
+                                    -testSuitePath="${tsPath}" ^
+                                    -browserType="Chrome" ^
+                                    -executionProfile="default" ^
+                                    -apiKey=%API_KEY% ^
+                                    -reportFolder="${modulReportDir}" ^
+                                    --config -proxy.auth.option=NO_PROXY -proxy.system.option=NO_PROXY -proxy.system.applyToDesiredCapabilities=true ^
+                                    -webui.autoUpdateDrivers=true -studioAssist.provider="katalon_ai"
+                                    """
                                 }
-                            }
-
-                            tsList.each { ts ->
-                                echo "Running Test Suite: ${ts}"
-                                def modulReportDir = "${env.REPORT_DIR}\\${modul}"
-                                modulReportDir = modulReportDir.replace("/", "\\") // Windows safe
-                                bat "if not exist \"${modulReportDir}\" mkdir \"${modulReportDir}\""
-
-                                // Jalankan Katalon CLI
-                                bat """
-                                %KATALON_PATH% -noSplash -runMode=console ^
-                                -projectPath="${PROJECT_PATH}" ^
-                                -retry=0 ^
-                                -testSuitePath="${ts}" ^
-                                -browserType="Chrome" ^
-                                -executionProfile="default" ^
-                                -apiKey=%API_KEY% ^
-                                -reportFolder="${modulReportDir}" ^
-                                --config -proxy.auth.option=NO_PROXY -proxy.system.option=NO_PROXY -proxy.system.applyToDesiredCapabilities=true ^
-                                -webui.autoUpdateDrivers=true -studioAssist.provider="katalon_ai"
-                                """
+                            } else {
+                                echo "No Test Suites found in module ${modul}"
                             }
                         }
                     }
@@ -68,7 +69,7 @@ pipeline {
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: "${env.WORKSPACE}\\Reports",
+                    reportDir: 'Reports',
                     reportFiles: '**/index.html',
                     reportName: 'Katalon Test Report'
                 ])

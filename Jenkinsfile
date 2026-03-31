@@ -12,26 +12,28 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
-                        // Ambil list folder modul
+                        // Ambil list modul (folder) di Test Suites
                         def modulDirsRaw = bat(
-                            script: "dir /b /ad \"%WORKSPACE%\\Test Suites\"",
+                            script: "dir /b /ad \"${env.WORKSPACE}\\Test Suites\"",
                             returnStdout: true
                         ).trim()
-                        def modulDirs = modulDirsRaw.split("\r\n")
+                        // Split baris ke array, hapus baris kosong
+                        def modulDirs = modulDirsRaw.split("\\r?\\n").findAll { it?.trim() }
+
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
                             echo "Running module: ${modul}"
 
-                            // Ambil semua TS di modul
+                            // Ambil semua TS (.ts) di modul
                             def tsRaw = bat(
-                                script: "dir /b \"%WORKSPACE%\\Test Suites\\${modul}\\*.ts\"",
+                                script: "dir /b \"${env.WORKSPACE}\\Test Suites\\${modul}\\*.ts\"",
                                 returnStdout: true
                             ).trim()
-                            def tsList = tsRaw ? tsRaw.split("\r\n") : []
+                            def tsList = tsRaw ? tsRaw.split("\\r?\\n").findAll { it?.trim() } : []
 
                             tsList.each { tsFile ->
-                                // Relative path untuk Katalon CLI
+                                // Path relative untuk Katalon
                                 def tsPath = "Test Suites/${modul}/${tsFile}".replace("\\","/")
 
                                 echo "Running Test Suite: ${tsPath}"
@@ -42,13 +44,13 @@ pipeline {
 
                                 // Jalankan Katalon CLI
                                 bat """
-                                %KATALON_PATH% -noSplash -runMode=console ^
+                                ${KATALON_PATH} -noSplash -runMode=console ^
                                 -projectPath="${PROJECT_PATH}" ^
                                 -retry=0 ^
                                 -testSuitePath="${tsPath}" ^
                                 -browserType="Chrome" ^
                                 -executionProfile="default" ^
-                                -apiKey=%API_KEY% ^
+                                -apiKey=${API_KEY} ^
                                 -reportFolder="${modulReportDir}" ^
                                 --config -proxy.auth.option=NO_PROXY -proxy.system.option=NO_PROXY -proxy.system.applyToDesiredCapabilities=true ^
                                 -webui.autoUpdateDrivers=true -studioAssist.provider="katalon_ai"

@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         KATALON_PATH = "C:\\Katalon\\KRE\\katalonc.exe"
-        PROJECT_PATH = "%WORKSPACE%\\kre-test.prj"
-        REPORT_DIR = "%WORKSPACE%\\Reports"
+        PROJECT_PATH = "${WORKSPACE}\\kre-test.prj"
+        REPORT_DIR = "${WORKSPACE}\\Reports"
     }
 
     stages {
@@ -12,42 +12,43 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
-                        // Ambil list modul di Test Suites
-                        def modulDirsRaw = bat(
-                            script: "for /d %i in (\"${WORKSPACE}\\Test Suites\\*\") do @echo %~nxi",
-                            returnStdout: true
-                        ).trim()
+                        // 1. Ambil folder modul
+                        def testSuitesDir = new File("${WORKSPACE}\\Test Suites")
+                        if (!testSuitesDir.exists()) {
+                            error "Folder Test Suites tidak ditemukan!"
+                        }
 
-                        def modulDirs = modulDirsRaw.split("\\r?\\n").findAll { it?.trim() }
+                        def modulDirs = testSuitesDir.listFiles().findAll { it.isDirectory() }*.name
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
                             echo "Running module: ${modul}"
+                            def modulDir = new File(testSuitesDir, modul)
 
-                            // Ambil semua TS (.ts) di modul
-                            def tsRaw = bat(
-                                script: "for %i in (\"${WORKSPACE}\\Test Suites\\${modul}\\*.ts\") do @echo %~nxi",
-                                returnStdout: true
-                            ).trim()
+                            // 2. Ambil semua TS (.ts)
+                            def tsFiles = modulDir.listFiles().findAll { it.name.endsWith('.ts') }*.name
+                            echo "Found TS: ${tsFiles}"
 
-                            def tsList = tsRaw ? tsRaw.split("\\r?\\n").findAll { it?.trim() } : []
-
-                            tsList.each { tsFile ->
+                            tsFiles.each { tsFile ->
                                 def tsPath = "Test Suites/${modul}/${tsFile}".replace("\\", "/")
                                 echo "Running Test Suite: ${tsPath}"
 
-                                def modulReportDir = "${REPORT_DIR}\\${modul}"
-                                bat "if not exist \"${modulReportDir}\" mkdir \"${modulReportDir}\""
+                                // 3. Folder report per modul
+                                def modulReportDir = new File(REPORT_DIR, modul)
+                                if (!modulReportDir.exists()) {
+                                    modulReportDir.mkdirs()
+                                }
 
+                                // 4. Jalankan Katalon CLI
                                 bat """
-                                ${KATALON_PATH} -noSplash -runMode=console ^
+                                "${KATALON_PATH}" -noSplash -runMode=console ^
                                 -projectPath="${PROJECT_PATH}" ^
                                 -retry=0 ^
                                 -testSuitePath="${tsPath}" ^
                                 -browserType="Chrome" ^
                                 -executionProfile="default" ^
                                 -apiKey=${API_KEY} ^
-                                -reportFolder="${modulReportDir}" ^
+                                -reportFolder="${modulReportDir.absolutePath}" ^
                                 --config -proxy.auth.option=NO_PROXY -proxy.system.option=NO_PROXY -proxy.system.applyToDesiredCapabilities=true ^
                                 -webui.autoUpdateDrivers=true -studioAssist.provider="katalon_ai"
                                 """
@@ -74,7 +75,7 @@ pipeline {
 
     post {
         always {
-            echo "Pipeline finished. Reports saved in ${env.REPORT_DIR}"
+            echo "Pipeline finished. Reports saved in ${REPORT_DIR}"
         }
     }
 }

@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'windows' }
+    agent { label 'Windows' }
 
     environment {
         KATALON_PATH = "C:\\Katalon\\KRE\\katalonc.exe"

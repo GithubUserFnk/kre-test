@@ -43,7 +43,7 @@ pipeline {
                                 // 🔥 FIX DI SINI (hapus .ts)
                                 def tsPath = "Test Suites/${modul}/${tsFile.replace('.ts','')}"
 
-                                def modulReportDir = new File(REPORT_DIR, modul)
+                                def modulReportDir = new File(REPORT_DIR)
                                 modulReportDir.mkdirs()
 
                                 bat """

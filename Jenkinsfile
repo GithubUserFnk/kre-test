@@ -12,7 +12,6 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
-                        // 1. Ambil folder modul
                         def testSuitesDir = new File("${WORKSPACE}\\Test Suites")
                         if (!testSuitesDir.exists()) {
                             error "Folder Test Suites tidak ditemukan!"
@@ -25,21 +24,19 @@ pipeline {
                             echo "Running module: ${modul}"
                             def modulDir = new File(testSuitesDir, modul)
 
-                            // 2. Ambil semua TS (.ts)
                             def tsFiles = modulDir.listFiles().findAll { it.name.endsWith('.ts') }*.name
                             echo "Found TS: ${tsFiles}"
 
                             tsFiles.each { tsFile ->
-                                def tsPath = "Test Suites/${modul}/${tsFile}".replace("\\", "/")
+                                // Remove .ts untuk Katalon CLI
+                                def tsPath = "Test Suites/${modul}/${tsFile.replaceFirst(/\.ts$/, '')}".replace("\\", "/")
                                 echo "Running Test Suite: ${tsPath}"
 
-                                // 3. Folder report per modul
                                 def modulReportDir = new File(REPORT_DIR, modul)
                                 if (!modulReportDir.exists()) {
                                     modulReportDir.mkdirs()
                                 }
 
-                                // 4. Jalankan Katalon CLI
                                 bat """
                                 "${KATALON_PATH}" -noSplash -runMode=console ^
                                 -projectPath="${PROJECT_PATH}" ^
@@ -65,7 +62,7 @@ pipeline {
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: 'Reports',
+                    reportDir: "${REPORT_DIR}",
                     reportFiles: '**/index.html',
                     reportName: 'Katalon Test Report'
                 ])

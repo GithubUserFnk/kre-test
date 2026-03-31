@@ -11,8 +11,8 @@ pipeline {
 
         stage('Clean Reports') {
             steps {
-                echo "Cleaning workspace / old reports..."
-                deleteDir() // safer, sandbox-friendly
+                echo "Cleaning old reports..."
+                bat "if exist \"${REPORT_DIR}\" rmdir /s /q \"${REPORT_DIR}\""
             }
         }
 
@@ -20,24 +20,20 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'KATALON_API_KEY', variable: 'API_KEY')]) {
                     script {
+
                         def testSuitesDir = new File("${WORKSPACE}\\Test Suites")
                         if (!testSuitesDir.exists()) {
                             error "Folder Test Suites tidak ditemukan!"
                         }
 
                         def modulDirs = testSuitesDir.listFiles()
-                            .findAll { it.isDirectory() }
-                            *.name
-
+                            .findAll { it.isDirectory() }*.name
                         echo "Found modules: ${modulDirs}"
 
                         modulDirs.each { modul ->
                             def modulDir = new File(testSuitesDir, modul)
-
                             def tsFiles = modulDir.listFiles()
-                                .findAll { it.name.endsWith('.ts') }
-                                *.name
-
+                                .findAll { it.name.endsWith('.ts') }*.name
                             echo "Running module: ${modul} -> ${tsFiles}"
 
                             tsFiles.each { tsFile ->
@@ -66,7 +62,7 @@ pipeline {
 
         stage('Clean Root Report Files') {
             steps {
-                echo "Removing any stray files in Reports root..."
+                // hapus file liar selain folder timestamp
                 bat """
                 cd "${REPORT_DIR}"
                 for %%f in (*) do (
@@ -94,7 +90,7 @@ pipeline {
 
     post {
         always {
-            echo "Pipeline finished. Reports saved in ${REPORT_DIR}"
+            echo "Reports saved in ${REPORT_DIR}"
         }
     }
 }

@@ -68,7 +68,7 @@ pipeline {
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: "${env.REPORT_DIR}",
+                    reportDir: "${env.WORKSPACE}\\Reports",
                     reportFiles: '**/index.html',
                     reportName: 'Katalon Test Report'
                 ])
